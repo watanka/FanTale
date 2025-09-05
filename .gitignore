@@ -1,0 +1,45 @@
+# Core
+node_modules/
+**/node_modules/
+.venv/
+
+# pycache
+__pycache__
+**/__pycache__
+**/*.pyc
+.mypy_cache
+.pytest_cache
+
+# Next.js
+.next/
+**/.next/
+
+# Turbo / build caches
+.turbo/
+**/.turbo/
+
+# Build outputs
+Dist/
+dist/
+**/dist/
+.out/
+coverage/
+
+# Env files
+.env
+.env.*
+*.env
+*.env.local
+**/.env
+**/.env.*
+**/*.env.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.db
+*.sqlite
+*.sqlite3
+samples/
