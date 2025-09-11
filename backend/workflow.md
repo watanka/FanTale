@@ -5,7 +5,7 @@ API 요청부터 Celery 작업 체인, 서비스 레이어, LangGraph 실행까�
 1) API 진입점: 스토리 생성 요청
 - 엔드포인트: `POST /stories`
 - 구현: `backend/app/api/routes/stories.py#create_story`
-- 동작: 새로운 `story_id`를 발급하고, Celery 체인으로 “스토리(스토리라인/플랜) 생성 → 챕터 생성”을 순차 실행합니다.
+- 동작: Celery 체인으로 “스토리(스토리라인/플랜) 생성 → 챕터 생성”을 순차 실행합니다.
 
 ```python
 @router.post("/stories", response_model=StoryCreateResponse)
@@ -24,7 +24,7 @@ def create_story(req: StoryCreateRequest) -> StoryCreateResponse:
 - 내부 품질 관리는 `storyplan_graph`의 피드백 루프(임계값/편집 제한)로 수행될 수 있으며, 확정된 플롯은 다음 단계 입력으로 사용됩니다.
 
 3) 챕터 순차 생성 단계 (서비스 레이어)
-- 두 번째 태스크 `generate_chapters_task`는 `chapter_service.create_chapter(story_id)`를 호출하여 챕터를 플롯 순서대로 하나씩 생성합니다.
+- 두 번째 태스크 `generate_chapters_task`는 `chapter_service.create_chapter(story_id)`를 호출하여 챕터를 플롯 순서대로 하나씩 생성합니다. (TODO: 배치처리로 API 호출 비용 개선할 수 있을듯)
 - 구현: `backend/app/services/chapter_service.py#create_chapter`
   - DB에서 `story`와 `chapter_plots`를 조회합니다.
   - 스토리 생성 시각(UTC) 기준으로 KST(Asia/Seoul)에 맞춰 기본 공개 기준 시간을 계산하고, `CHAPTERS_PER_DAY` 정책에 따라 각 챕터의 공개 가능 시간(`available_utc`)을 일자 단위로 분산 예약합니다.
@@ -44,14 +44,11 @@ def create_story(req: StoryCreateRequest) -> StoryCreateResponse:
 - `storyplan_graph` — 스토리 플랜을 생성하고 반복적으로 개선
 - `chapter_graph` — 챕터를 작성하고 반복적으로 개선
 
-두 워크플로우 모두 피드백 루프를 통해 품질 임계값을 충족하거나 편집 횟수 제한에 도달할 때까지 수정 과정을 반복합니다.
+두 워크플로우 모두 피드백 루프를 통해 품질 임계값을 충족하거나 편집 횟수 제한(num_edits)에 도달할 때까지 수정 과정을 반복합니다.
 
 ---
 
 ## 시각적 개요
-
-다이어그램은 `graph.get_graph(xray=True)`로 생성해서 `draw_png(...)`로 저장했습니다.
-
 - 스토리 플랜 워크플로우
 
   ![Story Plan Graph](./storyplan.png)
@@ -70,7 +67,7 @@ def create_story(req: StoryCreateRequest) -> StoryCreateResponse:
 - 편집 횟수 제한
   - `MAX_NUM_STORYPLAN_EDIT = 4`
   - `MAX_NUM_CHAPTER_EDIT = 2` # 최소 10개 이상의 챕터 생성에서 2번만 해도 꽤 많은 토큰(20*2*400)을 소비하기 때문에 
-- 각 워크플로우의 점수는 세 가지 피드백 점수의 평균으로 계산됩니다.
+- 각 워크플로우의 점수는 세 가지 피드백 점수의 평균으로 계산됩니다.(TODO: 피드백 점수 로직 고도화)
 - 편집을 수행할 때마다 해당 상태의 `num_edits`가 증가합니다.
 
 ---
