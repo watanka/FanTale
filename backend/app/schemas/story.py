@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 # ---- Requests ----
 class StoryParameter(BaseModel):
     num_chapters: int = Field(ge=1, le=50)
-    idols: str
+    idol_name: str
     genre: str  # backend may later switch to enum
 
 

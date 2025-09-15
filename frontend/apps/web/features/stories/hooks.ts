@@ -25,11 +25,12 @@ export function useCreateStory() {
       return service.createStory({
         user_id: vars.userId,
         story_parameter: {
-          idols: vars.idols,
+          idol_name: vars.idols,
           genre: vars.genre,
           num_chapters: vars.numChapters,
         },
       });
+      
     },
   });
 }

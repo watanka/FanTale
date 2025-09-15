@@ -14,6 +14,7 @@ from app.agents.story.chain import (
 )
 from app.agents.story.model import StoryPlan, StoryPlanFeedBack
 from app.agents.chapter.model import FeedBack
+from app.agents.research import create_research_graph, create_research_initial_state, format_research_result
 
 import logging
 
@@ -28,6 +29,7 @@ MAX_NUM_STORYPLAN_EDIT = 4
 
 class StoryPlanState(TypedDict):
     genre: str
+    idol_name: str  # Added for idol research
     character_descriptions: str
     story_plan: StoryPlan
     cliche_feedback: FeedBack
@@ -97,6 +99,29 @@ def edit_chapter_node(state: ChapterState):
     state["num_edits"] += 1
     return state
 
+
+def research_node(state: StoryPlanState):
+    """Research idol characters and generate character descriptions"""
+    logger.info(f"Starting character research for: {state['idol_name']}")
+    
+    try:
+        # Create research graph and run it
+        research_graph = create_research_graph()
+        initial_state = create_research_initial_state(state["idol_name"])
+        
+        config = {"configurable": {"thread_id": f"research_{state['idol_name']}"}}
+        final_state = research_graph.invoke(initial_state, config)
+        
+        # Format the result
+        character_descriptions = format_research_result(final_state)
+        state["character_descriptions"] = character_descriptions
+        logger.info(f"Character research completed for {state['idol_name']}")
+    except Exception as e:
+        logger.error(f"Character research failed: {e}")
+        # Fallback character descriptions
+        state["character_descriptions"] = f"{state['idol_name']} 그룹의 멤버들로 구성된 캐릭터들"
+    
+    return state
 
 def storyplan_node(state: StoryPlanState):
     storyplan: StoryPlan = generate_story_plan(
@@ -185,11 +210,13 @@ def should_continue_storyplan_edit(state: StoryPlanState):
 
 
 storyplan_workflow = StateGraph(StoryPlanState)
+storyplan_workflow.add_node("research_characters", research_node)
 storyplan_workflow.add_node("generate_story_plan", storyplan_node)
 storyplan_workflow.add_node("story_feedback", storyplan_feedback_node)
 storyplan_workflow.add_node("edit_story_plan", edit_storyplan_node)
 
-storyplan_workflow.add_edge(START, "generate_story_plan")
+storyplan_workflow.add_edge(START, "research_characters")
+storyplan_workflow.add_edge("research_characters", "generate_story_plan")
 storyplan_workflow.add_edge("generate_story_plan", "story_feedback")
 storyplan_workflow.add_conditional_edges(
     "story_feedback",

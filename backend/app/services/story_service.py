@@ -34,8 +34,9 @@ class StoryService:
         plan: StoryPlanState = storyplan_graph.invoke(
             {
                 "genre": req.story_parameter.genre,
-                "character_descriptions": req.story_parameter.idols,
+                "character_descriptions": "",
                 "story_plan": "",
+                "idol_name": req.story_parameter.idol_name,
                 "cliche_feedback": "",
                 "storyline_feedback": "",
                 "character_feedback": "",

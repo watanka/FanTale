@@ -28,6 +28,9 @@ dependencies = [
   "langsmith>=0.4.13",
   "graphviz>=0.21",
   "pygraphviz>=1.14",
+  "langmem>=0.0.29",
+  "batch-bridge>=0.0.1rc0",
+  "openai>=1.107.2",
 ]
 
 [build-system]
